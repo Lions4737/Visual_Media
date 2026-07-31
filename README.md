@@ -140,6 +140,16 @@ python scripts/make_failure_example_figures.py \
 The overlays use red for `clock`, blue for `digital clock`, green for union
 components, and yellow for components detected only by `digital clock`.
 
+Render the two frozen same-object double-counting examples from the original
+images and the saved CountGD heatmaps:
+
+```bash
+python scripts/make_self_similarity_figure.py \
+  --dataset-root "$DATASET_ROOT" \
+  --joined-csv "$RUN_ROOT/failure_analysis/joined_existing_results.csv" \
+  --output-dir "$RUN_ROOT/self_similarity_examples"
+```
+
 All paths under `RUN_ROOT` are generated artifacts and must remain outside this
 repository (or under an ignored `outputs/` directory).
 
