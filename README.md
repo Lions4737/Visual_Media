@@ -124,6 +124,19 @@ python scripts/analyze_prompt_union.py \
   --expected-images 400
 ```
 
+Render the four frozen failure examples directly from the original pixels and
+saved boxes. The two output JPEGs are generated artifacts and remain ignored:
+
+```bash
+python scripts/make_failure_example_figures.py \
+  --dataset-root "$DATASET_ROOT" \
+  --raw "$RUN_ROOT/clock_prompt_all.jsonl" \
+  --output-dir "$RUN_ROOT/failure_examples"
+```
+
+The overlays use red for `clock`, blue for `digital clock`, green for union
+components, and yellow for components detected only by `digital clock`.
+
 All paths under `RUN_ROOT` are generated artifacts and must remain outside this
 repository (or under an ignored `outputs/` directory).
 

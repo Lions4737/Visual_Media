@@ -1,0 +1,44 @@
+{
+  "failure_condition_1": {
+    "output_file": "failure_condition1_before_after.jpg",
+    "examples": [
+      {
+        "relative_path": "nine/nine_clocks/clocks_nine_000.png",
+        "requested_count": 9,
+        "before_count": 7,
+        "digital_count": 9,
+        "after_count": 9,
+        "note": "two digital displays recovered"
+      },
+      {
+        "relative_path": "seven/seven_clocks/clocks_seven_007.png",
+        "requested_count": 7,
+        "before_count": 6,
+        "digital_count": 6,
+        "after_count": 7,
+        "note": "clock-only and digital-only detections complement each other"
+      }
+    ]
+  },
+  "failure_condition_3": {
+    "output_file": "failure_condition3_before_after.jpg",
+    "examples": [
+      {
+        "relative_path": "two/two_clocks/clocks_two_017.png",
+        "requested_count": 2,
+        "before_count": 3,
+        "digital_count": 3,
+        "after_count": 2,
+        "note": "duplicate peaks on the right clock merged"
+      },
+      {
+        "relative_path": "two/two_clocks/clocks_two_039.png",
+        "requested_count": 2,
+        "before_count": 3,
+        "digital_count": 2,
+        "after_count": 2,
+        "note": "duplicate peaks on the left clock merged"
+      }
+    ]
+  }
+}
