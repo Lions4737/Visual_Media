@@ -15,6 +15,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 CONFIDENCE_THRESHOLD = 0.4
+FROZEN_SEED = 42
+EXPECTED_CHECKPOINT_SHA256 = (
+    "c1bab864b17db345b4c6e3aaabb5765bc2c0a90d0bc8defb5e664a74a50aa126"
+)
 BOX_COLOR = (255, 55, 70)
 
 
@@ -144,6 +148,8 @@ def validate_record(
         "prompt": str(example["class_name"]),
         "requested_count": int(example["requested_count"]),
         "predicted_count": int(example["predicted_count"]),
+        "seed": FROZEN_SEED,
+        "checkpoint_sha256": EXPECTED_CHECKPOINT_SHA256,
     }
     for field, value in expected.items():
         if record.get(field) != value:

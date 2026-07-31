@@ -143,7 +143,8 @@ components, and yellow for components detected only by `digital clock`.
 The original baseline CSV did not retain bounding-box coordinates. Rerun only
 the two frozen same-object double-counting examples with the same strict
 `score > 0.4` rule and save their boxes. The runner aborts if either rerun count
-differs from the frozen baseline count:
+differs from the frozen baseline count, the seed is not 42, or the checkpoint
+SHA-256 differs from the frozen checkpoint:
 
 ```bash
 python scripts/run_self_similarity_boxes.py \

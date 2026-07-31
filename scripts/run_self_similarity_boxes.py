@@ -10,6 +10,7 @@ the artifact if either count differs from the original baseline result.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -27,6 +28,12 @@ else:
     )
 
 
+FROZEN_SEED = 42
+EXPECTED_CHECKPOINT_SHA256 = (
+    "c1bab864b17db345b4c6e3aaabb5765bc2c0a90d0bc8defb5e664a74a50aa126"
+)
+
+
 def parse_args() -> argparse.Namespace:
     repo_root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
@@ -41,7 +48,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config", type=Path)
     parser.add_argument("--text-encoder-path", type=Path)
     parser.add_argument("--device", default="cpu")
-    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--seed",
+        type=int,
+        choices=[FROZEN_SEED],
+        default=FROZEN_SEED,
+        help="frozen experiment seed (only 42 is accepted)",
+    )
     parser.add_argument(
         "--output",
         type=Path,
@@ -49,6 +62,14 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def load_examples(path: Path) -> list[dict[str, object]]:
@@ -79,6 +100,12 @@ def main() -> None:
         image_path = args.dataset_root / str(example["relative_path"])
         if not image_path.is_file():
             raise FileNotFoundError(image_path)
+    checkpoint_sha256 = file_sha256(args.checkpoint)
+    if checkpoint_sha256 != EXPECTED_CHECKPOINT_SHA256:
+        raise RuntimeError(
+            "Checkpoint SHA-256 does not match the frozen baseline: "
+            f"expected {EXPECTED_CHECKPOINT_SHA256}, got {checkpoint_sha256}"
+        )
 
     model, transform, device = build_model(args)
     rows: list[dict[str, object]] = []
@@ -110,6 +137,7 @@ def main() -> None:
                 "min_saved_threshold": CONFIDENCE_THRESHOLD,
                 "seed": args.seed,
                 "device": str(device),
+                "checkpoint_sha256": checkpoint_sha256,
                 "inference_seconds": elapsed,
                 "detections": detections,
             }

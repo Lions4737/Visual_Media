@@ -32,6 +32,8 @@ def record() -> dict[str, object]:
         "requested_count": 2,
         "predicted_count": 2,
         "min_saved_threshold": 0.4,
+        "seed": figures.FROZEN_SEED,
+        "checkpoint_sha256": figures.EXPECTED_CHECKPOINT_SHA256,
         "detections": [detection(), detection(0.7)],
     }
 
@@ -61,6 +63,20 @@ class BoundingBoxArtifactValidationTests(unittest.TestCase):
         changed["min_saved_threshold"] = 0.3
 
         with self.assertRaisesRegex(RuntimeError, "Expected saved threshold"):
+            figures.validate_record(example(), changed)
+
+    def test_seed_drift_is_rejected(self) -> None:
+        changed = record()
+        changed["seed"] = 7
+
+        with self.assertRaisesRegex(RuntimeError, "seed"):
+            figures.validate_record(example(), changed)
+
+    def test_checkpoint_drift_is_rejected(self) -> None:
+        changed = record()
+        changed["checkpoint_sha256"] = "0" * 64
+
+        with self.assertRaisesRegex(RuntimeError, "checkpoint_sha256"):
             figures.validate_record(example(), changed)
 
 
