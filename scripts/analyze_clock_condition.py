@@ -9,6 +9,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.ticker import PercentFormatter
 from scipy.stats import fisher_exact
 
 
@@ -143,24 +144,34 @@ def main() -> None:
     plot = condition.set_index("condition").loc[
         ["analog_only", "analog_and_digital"]
     ]
-    fig, ax = plt.subplots(figsize=(6, 4))
+    fig, ax = plt.subplots(figsize=(5.4, 4.2))
     ax.bar(
         ["Analog only", "Analog + digital"],
-        1.0 - plot["exact"],
+        plot["exact"],
         color=["#5B9BD5", "#ED7D31"],
+        width=0.64,
+        zorder=3,
     )
     for index, (_, row) in enumerate(plot.iterrows()):
+        exact_n = int(row["samples"] - row["failures"])
         ax.text(
             index,
-            1.0 - row["exact"] + 0.015,
-            f"{int(row['failures'])}/{int(row['samples'])}",
+            row["exact"] + 0.025,
+            f"{exact_n}/{int(row['samples'])}\n({row['exact']:.2%})",
             ha="center",
+            va="bottom",
+            fontsize=16,
+            fontweight="bold",
         )
-    ax.set_ylim(0, 0.5)
-    ax.set_ylabel("Failure rate at threshold 0.4")
+    ax.set_ylim(0, 1.08)
+    ax.set_ylabel("ACC", fontsize=16)
     ax.set_xlabel("")
+    ax.yaxis.set_major_formatter(PercentFormatter(1.0))
+    ax.tick_params(axis="x", labelsize=15)
+    ax.tick_params(axis="y", labelsize=14)
+    ax.grid(axis="y", alpha=0.25, zorder=0)
     fig.tight_layout()
-    fig.savefig(args.output_dir / "clock_digital_condition.png", dpi=180)
+    fig.savefig(args.output_dir / "clock_digital_condition.png", dpi=240)
     plt.close(fig)
 
     print(json.dumps(result, indent=2))

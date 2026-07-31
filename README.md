@@ -124,6 +124,9 @@ python scripts/analyze_prompt_union.py \
   --expected-images 400
 ```
 
+This analysis also renders `clock_digital_condition.png` from the paired
+`clock` run, with ACC shown separately for analog-only and digital-mixed images.
+
 Render the four frozen failure examples directly from the original pixels and
 saved boxes. The two output JPEGs are generated artifacts and remain ignored:
 

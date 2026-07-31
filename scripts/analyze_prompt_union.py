@@ -15,7 +15,9 @@ import math
 from collections import defaultdict
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib.ticker import PercentFormatter
 from scipy.stats import binomtest, wilcoxon
 
 
@@ -23,6 +25,54 @@ PROMPTS = {"canonical": "clock", "digital": "digital clock"}
 CONFIDENCE_THRESHOLD = 0.4
 CENTER_DISTANCE_THRESHOLD = 0.05
 IOU_THRESHOLD = 0.3
+
+
+def save_clock_condition_accuracy(
+    summary: pd.DataFrame, output_path: Path
+) -> None:
+    """Plot paired clock-prompt baseline ACC for the two visual conditions."""
+    plot = summary.loc[
+        summary["group_type"].eq("condition")
+        & summary["method"].eq(PROMPTS["canonical"])
+        & summary["confidence_threshold"].eq(CONFIDENCE_THRESHOLD)
+    ].copy()
+    if set(plot["group_value"]) != {"analog_only", "analog_and_digital"}:
+        raise RuntimeError("Expected both frozen clock visual conditions")
+    plot = plot.set_index("group_value").loc[
+        ["analog_only", "analog_and_digital"]
+    ]
+
+    fig, ax = plt.subplots(figsize=(5.4, 4.2))
+    ax.bar(
+        ["Analog only", "Analog + digital"],
+        plot["exact_rate"],
+        color=["#5B9BD5", "#ED7D31"],
+        width=0.64,
+        zorder=3,
+    )
+    for index, (_, row) in enumerate(plot.iterrows()):
+        ax.text(
+            index,
+            float(row["exact_rate"]) + 0.025,
+            (
+                f"{int(row['exact_n'])}/{int(row['samples'])}\n"
+                f"({float(row['exact_rate']):.2%})"
+            ),
+            ha="center",
+            va="bottom",
+            fontsize=16,
+            fontweight="bold",
+        )
+    ax.set_ylim(0, 1.08)
+    ax.set_ylabel("ACC", fontsize=16)
+    ax.set_xlabel("")
+    ax.yaxis.set_major_formatter(PercentFormatter(1.0))
+    ax.tick_params(axis="x", labelsize=15)
+    ax.tick_params(axis="y", labelsize=14)
+    ax.grid(axis="y", alpha=0.25, zorder=0)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=240)
+    plt.close(fig)
 
 
 def parse_args() -> argparse.Namespace:
@@ -353,8 +403,12 @@ def main() -> None:
     summary.extend(
         aggregate(evaluation, "partition", f"evaluation_{len(evaluation)}")
     )
-    pd.DataFrame(summary).to_csv(
+    summary_frame = pd.DataFrame(summary)
+    summary_frame.to_csv(
         args.output_dir / "clock_prompt_union_summary.csv", index=False
+    )
+    save_clock_condition_accuracy(
+        summary_frame, args.output_dir / "clock_digital_condition.png"
     )
 
     component_sources: list[dict[str, object]] = []
@@ -479,7 +533,7 @@ def main() -> None:
         )
 
     print(
-        pd.DataFrame(summary)
+        summary_frame
         .loc[lambda table: table["group_type"].isin(["overall", "condition"])]
         .to_string(index=False)
     )
