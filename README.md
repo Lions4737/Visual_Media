@@ -140,13 +140,26 @@ python scripts/make_failure_example_figures.py \
 The overlays use red for `clock`, blue for `digital clock`, green for union
 components, and yellow for components detected only by `digital clock`.
 
-Render the two frozen same-object double-counting examples from the original
-images and the saved CountGD heatmaps:
+The original baseline CSV did not retain bounding-box coordinates. Rerun only
+the two frozen same-object double-counting examples with the same strict
+`score > 0.4` rule and save their boxes. The runner aborts if either rerun count
+differs from the frozen baseline count:
+
+```bash
+python scripts/run_self_similarity_boxes.py \
+  --dataset-root "$DATASET_ROOT" \
+  --countgd-root "$COUNTGD_ROOT" \
+  --checkpoint "$CHECKPOINT_PATH" \
+  --text-encoder-path "$TEXT_ENCODER_PATH" \
+  --output "$RUN_ROOT/self_similarity_boxes.jsonl"
+```
+
+Render the original/bounding-box comparison figure:
 
 ```bash
 python scripts/make_self_similarity_figure.py \
   --dataset-root "$DATASET_ROOT" \
-  --joined-csv "$RUN_ROOT/failure_analysis/joined_existing_results.csv" \
+  --detections "$RUN_ROOT/self_similarity_boxes.jsonl" \
   --output-dir "$RUN_ROOT/self_similarity_examples"
 ```
 

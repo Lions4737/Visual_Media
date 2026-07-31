@@ -1,26 +1,28 @@
 #!/usr/bin/env python3
-"""Render frozen original/heatmap pairs for same-object double counting.
+"""Render frozen original/bounding-box pairs for same-object double counting.
 
-The heatmaps are existing CountGD outputs from run_countgd_batch.py.  This
-script does not alter source pixels or rerun the model; it only validates the
-saved counts and arranges the evidence into a report-ready figure.
+The source pixels are never generated or retouched.  This script validates and
+overlays detections saved by run_self_similarity_boxes.py.
 """
 
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
 
+CONFIDENCE_THRESHOLD = 0.4
+BOX_COLOR = (255, 55, 70)
+
+
 def parse_args() -> argparse.Namespace:
     repo_root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset-root", type=Path, required=True)
-    parser.add_argument("--joined-csv", type=Path, required=True)
+    parser.add_argument("--detections", type=Path, required=True)
     parser.add_argument(
         "--examples",
         type=Path,
@@ -47,42 +49,18 @@ def load_examples(path: Path) -> dict[str, object]:
     return config
 
 
-def load_rows(
-    path: Path, relative_paths: set[str]
-) -> dict[str, dict[str, str]]:
-    rows: dict[str, dict[str, str]] = {}
-    with path.open(encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
-        required = {
-            "relative_path",
-            "class_name",
-            "pred_count",
-            "gt_count",
-            "heatmap_path",
-        }
-        missing = required - set(reader.fieldnames or [])
-        if missing:
-            raise ValueError(f"Joined CSV is missing columns: {sorted(missing)}")
-        for row in reader:
-            relative_path = str(row["relative_path"])
-            if relative_path not in relative_paths:
+def load_detections(path: Path) -> dict[str, dict[str, object]]:
+    records: dict[str, dict[str, object]] = {}
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
                 continue
-            if relative_path in rows:
-                raise RuntimeError(f"Duplicate joined row: {relative_path}")
-            rows[relative_path] = row
-    missing_rows = relative_paths - set(rows)
-    if missing_rows:
-        raise RuntimeError(f"Missing frozen joined rows: {sorted(missing_rows)}")
-    return rows
-
-
-def resolve_heatmap(joined_csv: Path, encoded_path: str) -> Path:
-    path = Path(encoded_path)
-    if not path.is_absolute():
-        path = joined_csv.parent / path
-    if not path.is_file():
-        raise FileNotFoundError(path)
-    return path
+            row = json.loads(line)
+            relative_path = str(row["relative_path"])
+            if relative_path in records:
+                raise RuntimeError(f"Duplicate detection row: {relative_path}")
+            records[relative_path] = row
+    return records
 
 
 def fit_image(source: Image.Image, size: int) -> tuple[Image.Image, int, int]:
@@ -91,36 +69,102 @@ def fit_image(source: Image.Image, size: int) -> tuple[Image.Image, int, int]:
     return image, (size - image.width) // 2, (size - image.height) // 2
 
 
+def draw_detection(
+    draw: ImageDraw.ImageDraw,
+    item: dict[str, object],
+    detection_index: int,
+    image_size: tuple[int, int],
+    offset: tuple[int, int],
+    font: ImageFont.ImageFont,
+) -> None:
+    image_width, image_height = image_size
+    x_offset, y_offset = offset
+    cx = x_offset + float(item["cx"]) * image_width
+    cy = y_offset + float(item["cy"]) * image_height
+    width = float(item["w"]) * image_width
+    height = float(item["h"]) * image_height
+    left = cx - width / 2
+    top = cy - height / 2
+    right = cx + width / 2
+    bottom = cy + height / 2
+    stroke = max(4, image_width // 150)
+    radius = max(12, image_width // 45)
+    draw.rectangle((left, top, right, bottom), outline=BOX_COLOR, width=stroke)
+    draw.ellipse(
+        (cx - radius, cy - radius, cx + radius, cy + radius),
+        fill=BOX_COLOR,
+        outline=(0, 0, 0),
+        width=max(1, stroke // 2),
+    )
+    label = str(detection_index)
+    label_box = draw.textbbox((0, 0), label, font=font)
+    label_width = label_box[2] - label_box[0]
+    label_height = label_box[3] - label_box[1]
+    draw.text(
+        (cx - label_width / 2, cy - label_height / 2 - 1),
+        label,
+        fill=(255, 255, 255),
+        font=font,
+    )
+
+
 def render_panel(
     source: Image.Image,
     title: str,
     panel_size: int,
     header_height: int,
-    font: ImageFont.ImageFont,
+    title_font: ImageFont.ImageFont,
+    box_font: ImageFont.ImageFont,
+    detections: list[dict[str, object]] | None = None,
 ) -> Image.Image:
     panel = Image.new("RGB", (panel_size, panel_size + header_height), "white")
     image, x_offset, y_inner = fit_image(source, panel_size)
-    panel.paste(image, (x_offset, header_height + y_inner))
+    y_offset = header_height + y_inner
+    panel.paste(image, (x_offset, y_offset))
     draw = ImageDraw.Draw(panel)
     draw.rectangle((0, 0, panel_size, header_height), fill=(20, 20, 20))
-    draw.text((12, 12), title, fill=(255, 255, 255), font=font)
+    draw.text((12, 12), title, fill=(255, 255, 255), font=title_font)
+    for index, item in enumerate(detections or [], start=1):
+        draw_detection(
+            draw,
+            item,
+            index,
+            image.size,
+            (x_offset, y_offset),
+            box_font,
+        )
     return panel
 
 
-def validate_example(
-    example: dict[str, object], row: dict[str, str]
-) -> None:
-    actual = {
-        "class_name": str(row["class_name"]),
-        "requested_count": int(row["gt_count"]),
-        "predicted_count": int(row["pred_count"]),
+def validate_record(
+    example: dict[str, object], record: dict[str, object]
+) -> list[dict[str, object]]:
+    expected = {
+        "class_name": str(example["class_name"]),
+        "prompt": str(example["class_name"]),
+        "requested_count": int(example["requested_count"]),
+        "predicted_count": int(example["predicted_count"]),
     }
-    for field, value in actual.items():
-        if example[field] != value:
+    for field, value in expected.items():
+        if record.get(field) != value:
             raise RuntimeError(
                 f"Frozen value changed for {example['relative_path']} / {field}: "
-                f"expected {example[field]}, got {value}"
+                f"expected {value!r}, got {record.get(field)!r}"
             )
+    saved_threshold = float(record.get("min_saved_threshold", 1.0))
+    if saved_threshold != CONFIDENCE_THRESHOLD:
+        raise RuntimeError(
+            f"Expected saved threshold {CONFIDENCE_THRESHOLD}, got {saved_threshold}"
+        )
+    detections = list(record["detections"])
+    if len(detections) != int(example["predicted_count"]):
+        raise RuntimeError(
+            f"Detection count changed for {example['relative_path']}: "
+            f"expected {example['predicted_count']}, got {len(detections)}"
+        )
+    if any(float(item["score"]) <= CONFIDENCE_THRESHOLD for item in detections):
+        raise RuntimeError("Detection artifact contains a score at/below 0.4")
+    return detections
 
 
 def main() -> None:
@@ -128,9 +172,14 @@ def main() -> None:
     if args.panel_size < 400:
         raise ValueError("--panel-size must be at least 400")
     config = load_examples(args.examples)
-    examples = config["examples"]
-    relative_paths = {str(example["relative_path"]) for example in examples}
-    rows = load_rows(args.joined_csv, relative_paths)
+    examples = list(config["examples"])
+    records = load_detections(args.detections)
+    expected_paths = {str(example["relative_path"]) for example in examples}
+    if set(records) != expected_paths:
+        raise RuntimeError(
+            "Detection rows do not match frozen examples: "
+            f"expected {sorted(expected_paths)}, got {sorted(records)}"
+        )
 
     header_height = max(52, args.panel_size // 11)
     label_height = max(48, args.panel_size // 12)
@@ -140,19 +189,16 @@ def main() -> None:
     draw = ImageDraw.Draw(sheet)
     title_font = ImageFont.load_default(size=max(18, args.panel_size // 28))
     label_font = ImageFont.load_default(size=max(17, args.panel_size // 30))
+    box_font = ImageFont.load_default(size=max(16, args.panel_size // 32))
 
     for index, example in enumerate(examples):
         relative_path = str(example["relative_path"])
-        row = rows[relative_path]
-        validate_example(example, row)
+        detections = validate_record(example, records[relative_path])
         source_path = args.dataset_root / relative_path
         if not source_path.is_file():
             raise FileNotFoundError(source_path)
-        heatmap_path = resolve_heatmap(args.joined_csv, row["heatmap_path"])
         with Image.open(source_path) as handle:
             source = handle.convert("RGB")
-        with Image.open(heatmap_path) as handle:
-            heatmap = handle.convert("RGB")
 
         row_top = index * row_height
         label = (
@@ -167,20 +213,23 @@ def main() -> None:
                 args.panel_size,
                 header_height,
                 title_font,
+                box_font,
             ),
             render_panel(
-                heatmap,
-                f"CountGD heatmap  |  predicted count = {example['predicted_count']}",
+                source,
+                (
+                    "CountGD bounding boxes  |  "
+                    f"predicted count = {example['predicted_count']}"
+                ),
                 args.panel_size,
                 header_height,
                 title_font,
+                box_font,
+                detections,
             ),
         ]
         for column, panel in enumerate(panels):
-            sheet.paste(
-                panel,
-                (column * args.panel_size, row_top + label_height),
-            )
+            sheet.paste(panel, (column * args.panel_size, row_top + label_height))
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     output_path = args.output_dir / str(config["output_file"])
