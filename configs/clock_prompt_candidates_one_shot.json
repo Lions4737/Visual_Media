@@ -1,0 +1,160 @@
+{
+  "generated_on": "2026-07-30",
+  "generated_by": "Codex (GPT-5)",
+  "generation_policy": "Generated once and frozen before the prompt sweep. Do not regenerate candidates after inspecting sweep results.",
+  "one_shot_input": "You are creating a frozen prompt vocabulary for a zero-shot visual counting experiment. Generate candidates once; they will be fixed before any evaluation images or results are inspected.\n\nSeed label: clock\nOperational target: Count each distinct physical object whose primary purpose is to display civil time and that would ordinarily be called a clock. Include analog and digital clocks, wall clocks, alarm/desk/mantel/grandfather/tower clocks. Exclude wrist-worn timepieces, stopwatches and timers, sundials, gauges/compasses, clock icons or printed pictures, and time displays embedded in phones, computers, ovens, or other appliances.\n\nReturn strict JSON only with these keys:\n- canonical: the seed label\n- synonyms: 2 short singular English near-synonyms; do not silently claim exact equivalence\n- disambiguated: 2 short singular English prompts that emphasize a real physical clock used to tell time\n- subtypes: 8 common visually distinct singular clock subcategories\n- exclusions: 12 short singular English labels for non-targets likely to be visually or semantically confused with a clock\nFor each item except canonical, include fields `text` and `risk_or_role` (at most 12 words). Do not inspect images and do not optimize the list using evaluation results.",
+  "one_shot_output": {
+    "canonical": "clock",
+    "synonyms": [
+      {
+        "text": "timepiece",
+        "risk_or_role": "Broader than clock; may include watches."
+      },
+      {
+        "text": "timekeeper",
+        "risk_or_role": "Ambiguous; may denote a person or timing device."
+      }
+    ],
+    "disambiguated": [
+      {
+        "text": "physical clock",
+        "risk_or_role": "Emphasizes a real object rather than an icon."
+      },
+      {
+        "text": "standalone clock",
+        "risk_or_role": "De-emphasizes time displays embedded in other devices."
+      }
+    ],
+    "subtypes": [
+      {
+        "text": "wall clock",
+        "risk_or_role": "Mounted clock subtype."
+      },
+      {
+        "text": "alarm clock",
+        "risk_or_role": "Bedside alarm-equipped clock subtype."
+      },
+      {
+        "text": "desk clock",
+        "risk_or_role": "Small freestanding clock subtype."
+      },
+      {
+        "text": "mantel clock",
+        "risk_or_role": "Decorative shelf clock subtype."
+      },
+      {
+        "text": "grandfather clock",
+        "risk_or_role": "Tall floor clock subtype."
+      },
+      {
+        "text": "tower clock",
+        "risk_or_role": "Large architectural clock subtype."
+      },
+      {
+        "text": "analog clock",
+        "risk_or_role": "Clock with hands and dial."
+      },
+      {
+        "text": "digital clock",
+        "risk_or_role": "Clock with numeric time display."
+      }
+    ],
+    "exclusions": [
+      {
+        "text": "wristwatch",
+        "risk_or_role": "Wearable timepiece outside target definition."
+      },
+      {
+        "text": "smartwatch",
+        "risk_or_role": "Wearable digital device outside target definition."
+      },
+      {
+        "text": "stopwatch",
+        "risk_or_role": "Measures elapsed time rather than civil time."
+      },
+      {
+        "text": "timer",
+        "risk_or_role": "Counts intervals rather than displaying civil time."
+      },
+      {
+        "text": "sundial",
+        "risk_or_role": "Time indicator excluded by operational definition."
+      },
+      {
+        "text": "gauge",
+        "risk_or_role": "Circular dial may resemble an analog clock."
+      },
+      {
+        "text": "speedometer",
+        "risk_or_role": "Numbered circular dial may resemble a clock."
+      },
+      {
+        "text": "compass",
+        "risk_or_role": "Circular marked face may resemble a clock."
+      },
+      {
+        "text": "clock icon",
+        "risk_or_role": "Graphic symbol, not a physical clock."
+      },
+      {
+        "text": "printed clock picture",
+        "risk_or_role": "Depiction, not a physical clock."
+      },
+      {
+        "text": "phone display",
+        "risk_or_role": "Embedded time display outside target definition."
+      },
+      {
+        "text": "appliance display",
+        "risk_or_role": "Embedded numeric display outside target definition."
+      }
+    ]
+  },
+  "pilot_prompts": [
+    {
+      "id": "canonical",
+      "category": "canonical",
+      "text": "clock"
+    },
+    {
+      "id": "near_synonym",
+      "category": "synonym",
+      "text": "timepiece"
+    },
+    {
+      "id": "physical",
+      "category": "disambiguated",
+      "text": "physical clock"
+    },
+    {
+      "id": "standalone",
+      "category": "disambiguated",
+      "text": "standalone clock"
+    },
+    {
+      "id": "wall",
+      "category": "subtype",
+      "text": "wall clock"
+    },
+    {
+      "id": "alarm",
+      "category": "subtype",
+      "text": "alarm clock"
+    },
+    {
+      "id": "analog",
+      "category": "subtype",
+      "text": "analog clock"
+    },
+    {
+      "id": "digital",
+      "category": "subtype",
+      "text": "digital clock"
+    }
+  ],
+  "notes": [
+    "Exclusion labels are diagnostic controls, not negative prompts.",
+    "Subtype counts must not be added without spatial duplicate removal.",
+    "The eight pilot prompts were fixed before the sweep to limit CPU cost."
+  ]
+}

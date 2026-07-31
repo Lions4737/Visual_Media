@@ -1,0 +1,7 @@
+{
+  "seven/seven_clocks/clocks_seven_011.png": {
+    "visual_count": 8,
+    "audit_category": "generation_request_count_mismatch",
+    "audit_note": "The image visibly contains seven analog clocks and one digital clock; requested_count=7 while the union count is 8."
+  }
+}

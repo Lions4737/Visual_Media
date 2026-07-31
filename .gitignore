@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# External data, models, and generated artifacts
+data/
+datasets/
+checkpoints/
+outputs/
+artifacts/
+runs/
+reports/
+CountGD/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.jsonl
+*.png
+*.jpg
+*.jpeg
+*.zip
+
+# LaTeX/report build products
+*.aux
+*.log
+*.out
+*.pdf
+*.synctex.gz
+*.tex
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/
